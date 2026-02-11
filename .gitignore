@@ -21,4 +21,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+logs/
+
+# TLS certificates
+*.pem
 
