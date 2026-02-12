@@ -29,6 +29,7 @@ export class HttpServer {
     this.clients = new Set();
     this.pendingToolResults = new Map();
     this.eventQueue = [];
+    this.emulatorDomain = null; // Domain where the emulator is running
   }
 
   /**
@@ -126,7 +127,7 @@ export class HttpServer {
       return;
     }
 
-    if (req.method === "GET" && req.url === "/events") {
+    if (req.method === "GET" && req.url.startsWith("/events")) {
       // SSE endpoint for streaming events to frontend
       this._handleEventStream(req, res);
       return;
@@ -168,8 +169,19 @@ export class HttpServer {
    * Handle Server-Sent Events stream
    */
   _handleEventStream(req, res) {
-    if (this.debug) {
-      logger.log("[HTTP] SSE client connected");
+    // Parse domain from query parameter
+    const url = new URL(req.url, `http://localhost:${this.port}`);
+    const domain = url.searchParams.get("domain");
+
+    if (domain) {
+      this.emulatorDomain = domain;
+      if (this.debug) {
+        logger.log(`[HTTP] SSE client connected from emulator domain: ${domain}`);
+      }
+    } else {
+      if (this.debug) {
+        logger.log("[HTTP] SSE client connected (no domain provided)");
+      }
     }
 
     // Set SSE headers
@@ -427,6 +439,15 @@ export class HttpServer {
       clients: this.clients.size,
       protocol: this.useHttps ? "https" : "http",
       url: `${this.useHttps ? "https" : "http"}://localhost:${this.port}`,
+      emulatorDomain: this.emulatorDomain,
+      llmsTxtUrl: this.emulatorDomain ? `${this.emulatorDomain}/llms.txt` : null,
     };
+  }
+
+  /**
+   * Get the llms.txt URL for the connected emulator
+   */
+  getLlmsTxtUrl() {
+    return this.emulatorDomain ? `${this.emulatorDomain}/llms.txt` : null;
   }
 }
