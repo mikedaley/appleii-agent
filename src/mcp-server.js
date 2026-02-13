@@ -12,6 +12,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { tools } from "./tools/index.js";
+import { VERSION } from "./version.js";
 
 /**
  * MCP Server for Apple //e emulator agent
@@ -22,7 +23,7 @@ export class McpServer {
     this.server = new Server(
       {
         name: "appleii-agent",
-        version: "1.0.0",
+        version: VERSION,
       },
       {
         capabilities: {
