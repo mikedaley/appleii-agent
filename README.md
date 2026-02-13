@@ -38,19 +38,23 @@ npm install
 
 Add to your MCP client configuration. For Claude Code, edit `~/.claude/mcp.json`:
 
-### If installed globally
+### Option 1: Using bunx (Recommended)
+
+Runs the published package directly with Bun:
 
 ```json
 {
   "mcpServers": {
     "appleii-agent": {
-      "command": "appleii-agent"
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["-y", "@retrotech71/appleii-agent"]
     }
   }
 }
 ```
 
-### If installed from source
+### Option 2: Local development from source
 
 ```json
 {
