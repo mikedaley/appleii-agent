@@ -5,6 +5,8 @@
  *  Shawn Bullock <shawn@agenticexpert.ai>
  */
 
+import { VERSION, NAME } from "../version.js";
+
 export const tool = {
   name: "get_state",
   description: "Get current state of the MCP server and HTTP server",
@@ -18,8 +20,8 @@ export function handler(args, httpServer) {
   const status = httpServer.getStatus();
   return {
     mcp: {
-      name: "appleii-agent",
-      version: "1.0.0",
+      name: NAME,
+      version: VERSION,
       connected: true,
     },
     http: {
