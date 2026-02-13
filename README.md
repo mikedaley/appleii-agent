@@ -109,6 +109,8 @@ Save 256 bytes from memory address $0800 to ~/output.bin
 | `set_https` | Toggle HTTPS mode |
 | `set_debug` | Toggle debug logging |
 | `get_state` | Get current server state |
+| `shutdown_remote_server` | Shutdown another MCP server instance on the same port |
+| `disconnect_clients` | Gracefully disconnect all connected emulator clients |
 
 ## Environment Variables
 
@@ -153,6 +155,13 @@ Or toggle at runtime via the `set_https` tool.
 - Make sure the emulator is running in your browser
 - Click the sparkle icon to view connection details
 - Check that port 3033 is not in use by another process
+
+**Reclaiming the Apple II Agent port (multiple MCP instances)**
+- The MCP server handles port conflicts gracefully and won't fail
+- Use `server_control` with action `status` to check if port is in use
+- Use `shutdown_remote_server` to reclaim the port by stopping the other instance
+- After shutdown, use `server_control` with action `start` to start this instance on the reclaimed port
+- Note: A server stopped via `shutdown_remote_server` can only be restarted by its owning MCP instance
 
 **Tools return errors**
 - The emulator must be powered on for most tools to work

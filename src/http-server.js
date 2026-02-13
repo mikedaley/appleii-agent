@@ -30,6 +30,8 @@ export class HttpServer {
     this.pendingToolResults = new Map();
     this.eventQueue = [];
     this.emulatorDomain = null; // Domain where the emulator is running
+    this.portInUse = false; // Track if port is in use by another instance
+    this.externallyShutdown = false; // Track if shutdown came from external command
   }
 
   /**
@@ -69,6 +71,11 @@ export class HttpServer {
    * Start the HTTP/HTTPS server
    */
   async start() {
+    // Log if restarting after external shutdown (informational only)
+    if (this.externallyShutdown && this.debug) {
+      logger.log("[HTTP] Restarting after external shutdown");
+    }
+
     return new Promise((resolve, reject) => {
       const requestHandler = (req, res) => {
         this._handleRequest(req, res);
@@ -97,11 +104,29 @@ export class HttpServer {
       }
 
       this.server.listen(this.port, () => {
+        // Successfully started - clear flags
+        this.portInUse = false;
+        this.externallyShutdown = false;
+        if (this.debug) {
+          logger.log(`[HTTP] Server listening on port ${this.port}`);
+        }
         resolve();
       });
 
       this.server.on("error", (error) => {
-        reject(error);
+        // Handle port already in use gracefully
+        if (error.code === "EADDRINUSE") {
+          this.portInUse = true;
+          this.server = null;
+          if (this.debug) {
+            logger.log(`[HTTP] Port ${this.port} already in use - server not started`);
+          }
+          // Resolve instead of reject to keep MCP alive
+          resolve();
+        } else {
+          // Other errors still reject
+          reject(error);
+        }
       });
     });
   }
@@ -170,6 +195,33 @@ export class HttpServer {
     if (req.method === "POST" && req.url === "/call-tool") {
       // Call an MCP tool from the frontend
       await this._handleCallTool(req, res);
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/shutdown") {
+      // External shutdown command - stops server and prevents restart
+      if (this.debug) {
+        logger.log("[HTTP] Received external shutdown command");
+      }
+
+      // Mark as externally shutdown
+      this.externallyShutdown = true;
+
+      // Send response before shutting down
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        status: "shutting_down",
+        message: "Server shutting down. Can only be restarted by owning MCP instance."
+      }));
+
+      // Stop the server after response is sent (internal=false to preserve externallyShutdown flag)
+      setTimeout(async () => {
+        await this.stop(false);
+        if (this.debug) {
+          logger.log("[HTTP] Server stopped by external shutdown");
+        }
+      }, 100);
+
       return;
     }
 
@@ -398,7 +450,7 @@ export class HttpServer {
   /**
    * Stop the HTTP/HTTPS server
    */
-  async stop() {
+  async stop(internal = true) {
     if (this.server) {
       // Close all SSE connections
       this.clients.forEach((client) => {
@@ -409,6 +461,14 @@ export class HttpServer {
       return new Promise((resolve) => {
         this.server.close(() => {
           this.server = null;
+          // Only clear externallyShutdown flag if this is an internal stop
+          // (from the owning MCP instance)
+          if (internal && this.externallyShutdown) {
+            this.externallyShutdown = false;
+            if (this.debug) {
+              logger.log("[HTTP] External shutdown flag cleared by owning instance");
+            }
+          }
           resolve();
         });
       });
@@ -463,6 +523,8 @@ export class HttpServer {
       url: `${this.useHttps ? "https" : "http"}://localhost:${this.port}`,
       emulatorDomain: this.emulatorDomain,
       llmsTxtUrl: this.emulatorDomain ? `${this.emulatorDomain}/llms.txt` : null,
+      portInUse: this.portInUse,
+      externallyShutdown: this.externallyShutdown,
     };
   }
 

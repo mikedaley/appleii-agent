@@ -29,7 +29,18 @@ async function main() {
 
     const protocol = USE_HTTPS ? "https" : "http";
     logger.log("Apple II MCP Agent initialized");
-    logger.log(`${protocol.toUpperCase()} server listening on ${protocol}://localhost:${HTTP_PORT}`);
+
+    // Check if HTTP server actually started
+    const status = httpServer.getStatus();
+    if (status.running) {
+      logger.log(`${protocol.toUpperCase()} server listening on ${protocol}://localhost:${HTTP_PORT}`);
+    } else if (status.portInUse) {
+      logger.log(`Port ${HTTP_PORT} already in use - HTTP server not started`);
+      logger.log("Use server_control tool to attempt start again or shutdown_remote_server to stop the other instance");
+    } else if (status.externallyShutdown) {
+      logger.log("HTTP server cannot start - was externally shutdown");
+      logger.log("Restart the MCP instance to enable HTTP server");
+    }
 
   } catch (error) {
     logger.log("Failed to start Apple II MCP Agent:", error);
