@@ -109,6 +109,7 @@ Save 256 bytes from memory address $0800 to ~/output.bin
 | `set_https` | Toggle HTTPS mode |
 | `set_debug` | Toggle debug logging |
 | `get_state` | Get current server state |
+| `get_version` | Get MCP server version information |
 | `shutdown_remote_server` | Shutdown another MCP server instance on the same port |
 | `disconnect_clients` | Gracefully disconnect all connected emulator clients |
 

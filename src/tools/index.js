@@ -10,6 +10,7 @@ import * as serverControl from "./server-control.js";
 import * as setHttps from "./set-https.js";
 import * as setDebug from "./set-debug.js";
 import * as getState from "./get-state.js";
+import * as getVersion from "./get-version.js";
 import * as disconnectClients from "./disconnect-clients.js";
 import * as shutdownRemoteServer from "./shutdown-remote-server.js";
 import * as showWindow from "./show-window.js";
@@ -27,6 +28,7 @@ export const tools = [
   setHttps,
   setDebug,
   getState,
+  getVersion,
   disconnectClients,
   shutdownRemoteServer,
   showWindow,
