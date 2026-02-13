@@ -1,6 +1,6 @@
 {
   "name": "@retrotech71/appleii-agent",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "MCP server for the Apple //e browser emulator — control the emulator and integrate with AI agents",
   "type": "module",
   "main": "src/index.js",
