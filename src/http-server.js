@@ -117,13 +117,25 @@ export class HttpServer {
 
     // Enable CORS with Private Network Access (required for public HTTPS → localhost)
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     res.setHeader("Access-Control-Allow-Private-Network", "true");
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    if (req.method === "HEAD" && req.url.startsWith("/events")) {
+      // Check if connection is allowed (for single-client mode)
+      if (this.clients.size > 0) {
+        res.writeHead(409, { "Content-Type": "text/plain" });
+        res.end("Another Apple //e Emulator Already Connected");
+      } else {
+        res.writeHead(200, { "Content-Type": "text/event-stream" });
+        res.end();
+      }
       return;
     }
 
@@ -169,6 +181,16 @@ export class HttpServer {
    * Handle Server-Sent Events stream
    */
   _handleEventStream(req, res) {
+    // Check if a client is already connected (single client mode)
+    if (this.clients.size > 0) {
+      if (this.debug) {
+        logger.log("[HTTP] Rejecting connection - another client already connected");
+      }
+      res.writeHead(409, { "Content-Type": "text/plain" });
+      res.end("Another Apple //e Emulator Already Connected");
+      return;
+    }
+
     // Parse domain from query parameter
     const url = new URL(req.url, `http://localhost:${this.port}`);
     const domain = url.searchParams.get("domain");
@@ -196,7 +218,7 @@ export class HttpServer {
     res.write(": connected\n\n");
 
     // Add client to set
-    const client = { req, res };
+    const client = { req, res, domain };
     this.clients.add(client);
 
     // Send queued events to new client
@@ -449,5 +471,47 @@ export class HttpServer {
    */
   getLlmsTxtUrl() {
     return this.emulatorDomain ? `${this.emulatorDomain}/llms.txt` : null;
+  }
+
+  /**
+   * Gracefully disconnect all clients
+   */
+  disconnectAllClients() {
+    if (this.clients.size === 0) {
+      if (this.debug) {
+        logger.log("[HTTP] No clients to disconnect");
+      }
+      return { disconnected: 0 };
+    }
+
+    const count = this.clients.size;
+
+    // Send disconnect event to all clients before closing
+    this.clients.forEach((client) => {
+      try {
+        // Send a custom disconnect event
+        this._writeSSE(client.res, {
+          type: "DISCONNECT",
+          reason: "Server requested disconnect",
+          graceful: true,
+        });
+        // Close the connection
+        client.res.end();
+      } catch (error) {
+        if (this.debug) {
+          logger.log(`[HTTP] Error disconnecting client: ${error.message}`);
+        }
+      }
+    });
+
+    this.clients.clear();
+    this.eventQueue = [];
+    this.emulatorDomain = null;
+
+    if (this.debug) {
+      logger.log(`[HTTP] Gracefully disconnected ${count} client(s)`);
+    }
+
+    return { disconnected: count };
   }
 }
