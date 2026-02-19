@@ -1,16 +1,16 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { pathResolver } from '../path-resolver.js';
 
 export const tool = {
   name: "save_disk_file",
-  description: "Save disk file content to the local filesystem. Content should be base64 encoded binary data.",
+  description: "Save disk file content to the local filesystem. Content should be base64 encoded binary data. Supports sandbox paths like [files]/data.bin or full paths like ~/Documents/file.bin",
   inputSchema: {
     type: "object",
     properties: {
       path: {
         type: "string",
-        description: "Path to save the file (supports ~ for home directory)"
+        description: "Path to save the file. Use [sandbox]/path syntax or full path with ~ for home directory"
       },
       contentBase64: {
         type: "string",
@@ -20,6 +20,11 @@ export const tool = {
         type: "boolean",
         description: "Allow overwriting existing files (default: false)",
         default: false
+      },
+      direct: {
+        type: "boolean",
+        description: "When true (default), decode and save the file, returning only metadata. When false, return the base64 content to the LLM without saving.",
+        default: true
       }
     },
     required: ["path", "contentBase64"]
@@ -27,7 +32,7 @@ export const tool = {
 };
 
 export function handler(args) {
-  const { path: filePath, contentBase64, overwrite = false } = args;
+  const { path: filePath, contentBase64, overwrite = false, direct = true } = args;
 
   if (!filePath) {
     return {
@@ -43,12 +48,20 @@ export function handler(args) {
     };
   }
 
+  // direct=false: return content to LLM without saving
+  if (!direct) {
+    const raw = contentBase64.replace(/^data:[^;]+;base64,\s*/, '').trim();
+    const buffer = Buffer.from(raw, 'base64');
+    return {
+      success: true,
+      contentBase64: raw,
+      size: buffer.length
+    };
+  }
+
   try {
-    // Expand ~ to home directory
-    let expandedPath = filePath;
-    if (filePath.startsWith('~')) {
-      expandedPath = path.join(os.homedir(), filePath.slice(1));
-    }
+    // Resolve path (handles sandbox paths and ~ expansion)
+    const expandedPath = pathResolver.resolve(filePath);
 
     // Check if file exists and overwrite is false
     if (!overwrite && fs.existsSync(expandedPath)) {
@@ -58,8 +71,12 @@ export function handler(args) {
       };
     }
 
+    // Strip data URL prefix if present (e.g. "data:image/png;base64, iVBOR...")
+    // The regex handles any media type and optional whitespace after the comma
+    const raw = contentBase64.replace(/^data:[^;]+;base64,\s*/, '').trim();
+
     // Decode base64 content
-    const buffer = Buffer.from(contentBase64, 'base64');
+    const buffer = Buffer.from(raw, 'base64');
 
     // Ensure directory exists
     const dir = path.dirname(expandedPath);

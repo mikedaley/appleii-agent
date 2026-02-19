@@ -13,6 +13,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { tools } from "./tools/index.js";
 import { VERSION } from "./version.js";
+import { pathResolver } from "./path-resolver.js";
 
 /**
  * MCP Server for Apple //e emulator agent
@@ -60,6 +61,11 @@ export class McpServer {
         // Call the handler
         const result = await toolModule.handler(args, this.httpServer);
 
+        // If the handler returns _mcpContent, pass it through directly (e.g. image content)
+        if (result?._mcpContent) {
+          return { content: result._mcpContent };
+        }
+
         return {
           content: [
             {
@@ -88,5 +94,15 @@ export class McpServer {
   async start() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
+
+    // Alert user if no sandbox config is configured
+    if (!pathResolver.configPath) {
+      await this.server.sendLoggingMessage({
+        level: "warning",
+        data: "⚠️  Apple //e Agent: No sandbox config set. File operations are disabled. " +
+              "Set the APPLEII_AGENT_SANDBOX environment variable to point to your sandbox.config file. " +
+              "See https://github.com/mikedaley/appleii-agent#sandbox-paths for setup instructions.",
+      });
+    }
   }
 }

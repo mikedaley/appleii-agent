@@ -7,17 +7,17 @@
 
 import fs from 'fs';
 import path from 'path';
-import { homedir } from 'os';
+import { pathResolver } from '../path-resolver.js';
 
 export const tool = {
   name: "load_disk_image",
-  description: "Load a disk image file from the local filesystem and return as base64",
+  description: "Load a disk image file from the local filesystem and return as base64. Supports sandbox paths like [disks]/game.dsk or full paths like ~/Documents/game.dsk",
   inputSchema: {
     type: "object",
     properties: {
       path: {
         type: "string",
-        description: "Path to disk image file (supports ~ for home directory)",
+        description: "Path to disk image file. Use [sandbox]/path syntax or full path with ~ for home directory",
       },
     },
     required: ["path"],
@@ -35,16 +35,8 @@ export function handler(args) {
   }
 
   try {
-    // Expand ~ to home directory
-    let expandedPath = filePath;
-    if (filePath.startsWith('~/')) {
-      expandedPath = path.join(homedir(), filePath.slice(2));
-    } else if (filePath === '~') {
-      expandedPath = homedir();
-    }
-
-    // Resolve to absolute path
-    const absolutePath = path.resolve(expandedPath);
+    // Resolve path (handles sandbox paths and ~ expansion)
+    const absolutePath = pathResolver.resolve(filePath);
 
     // Check if file exists
     if (!fs.existsSync(absolutePath)) {

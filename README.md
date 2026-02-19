@@ -36,11 +36,70 @@ npm install
 
 ## Configuration
 
-Add to your MCP client configuration. For Claude Code, edit `~/.claude/mcp.json`:
+### For Claude Desktop
 
-### Option 1: Using bunx (Recommended)
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%/Claude/claude_desktop_config.json` (Windows):
 
-Runs the published package directly with Bun:
+**Using npx (Recommended):**
+
+```json
+{
+  "mcpServers": {
+    "appleii-agent": {
+      "command": "npx",
+      "args": ["-y", "@retrotech71/appleii-agent"]
+    }
+  }
+}
+```
+
+**Using bunx:**
+
+```json
+{
+  "mcpServers": {
+    "appleii-agent": {
+      "command": "bunx",
+      "args": ["-y", "@retrotech71/appleii-agent"]
+    }
+  }
+}
+```
+
+**From source:**
+
+```json
+{
+  "mcpServers": {
+    "appleii-agent": {
+      "command": "node",
+      "args": ["/absolute/path/to/appleii-agent/src/index.js"]
+    }
+  }
+}
+```
+
+**With custom sandbox config location:**
+
+```json
+{
+  "mcpServers": {
+    "appleii-agent": {
+      "command": "npx",
+      "args": ["-y", "@retrotech71/appleii-agent"],
+      "env": {
+        "APPLEII_AGENT_SANDBOX": "/path/to/custom/sandbox.config"
+      }
+    }
+  }
+}
+```
+
+### For Claude Code
+
+Edit `~/.claude/mcp.json`:
+
+**Using bunx (Recommended):**
 
 ```json
 {
@@ -54,7 +113,7 @@ Runs the published package directly with Bun:
 }
 ```
 
-### Option 2: Local development from source
+**From source:**
 
 ```json
 {
@@ -78,12 +137,19 @@ Runs the published package directly with Bun:
 
 ```
 Show the CPU debugger window
-Load ~/Documents/ProDOS_2_4_2.dsk into drive 1
+Load [disks]/ProDOS_2_4_2.dsk into drive 1
+Load [zork]/zork1.dsk into drive 2
 Write a BASIC program that draws a sine wave
 Install the SmartPort card in slot 7
-Load ~/Images/Total_Replay.hdv into SmartPort device 1
+Load [games]/Total_Replay.hdv into SmartPort device 1
 Turn on the emulator and boot from disk
-Save 256 bytes from memory address $0800 to ~/output.bin
+Save the BASIC program to [basic]/sinewave.bas
+```
+
+You can also use full paths:
+```
+Load ~/Documents/ProDOS.dsk into drive 1
+Save assembly code to ~/code/program.s
 ```
 
 ## Available Tools
@@ -116,6 +182,55 @@ Save 256 bytes from memory address $0800 to ~/output.bin
 | `get_version` | Get MCP server version information |
 | `shutdown_remote_server` | Shutdown another MCP server instance on the same port |
 | `disconnect_clients` | Gracefully disconnect all connected emulator clients |
+
+## Sandbox Paths
+
+Sandbox paths provide convenient shortcuts for frequently accessed directories. Instead of typing full paths, you can define sandboxes in a configuration file and use them across all file operations.
+
+### Configuration
+
+1. **Create a sandbox config file** anywhere you like (e.g., `~/sandbox.config`):
+
+```
+# Apple //e Agent - Sandbox Paths Configuration
+# Format: [key]@/path/to/directory
+
+[disks]@~/Documents/Apple2/Disks
+[games]@~/Documents/Apple2/Games
+[zork]@~/Games/Zork
+[basic]@~/Documents/Apple2/BASIC
+[files]@~/Documents/Apple2/Files
+```
+
+2. **Set the `APPLEII_AGENT_SANDBOX` environment variable** to point to your config file in your MCP client configuration (see Configuration section above for examples).
+
+### Usage
+
+All file loading/saving tools support both sandbox syntax and full paths:
+
+**With sandbox paths:**
+```
+Load [disks]/ProDOS.dsk into drive 1
+Load [zork]/zork1.dsk into drive 2
+Save BASIC program to [basic]/hello.bas
+Load [games]/total-replay.hdv into SmartPort device 1
+```
+
+**With full paths:**
+```
+Load ~/Documents/game.dsk into drive 1
+Save assembly to ~/code/program.s
+```
+
+### Supported Tools
+
+Sandbox paths work with:
+- `load_disk_image` - `[disks]/game.dsk`
+- `load_smartport_image` - `[games]/hd.hdv`
+- `load_file` - `[files]/data.bin`
+- `save_basic_file` - `[basic]/program.bas`
+- `save_asm_file` - `[asm]/code.s`
+- `save_disk_file` - `[files]/output.bin`
 
 ## Environment Variables
 

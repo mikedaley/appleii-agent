@@ -18,10 +18,10 @@ import * as hideWindow from "./hide-window.js";
 import * as focusWindow from "./focus-window.js";
 import * as loadDiskImage from "./load-disk-image.js";
 import * as loadFile from "./load-file.js";
-import * as saveBasicFile from "./save-basic-file.js";
-import * as saveAsmFile from "./save-asm-file.js";
-import * as saveDiskFile from "./save-disk-file.js";
 import * as loadSmartportImage from "./load-smartport-image.js";
+import * as reloadSandbox from "./reload-sandbox.js";
+import * as getScreenshot from "./get-screenshot.js";
+import * as saveTo from "./save-to.js";
 
 export const tools = [
   serverControl,
@@ -29,6 +29,7 @@ export const tools = [
   setDebug,
   getState,
   getVersion,
+  reloadSandbox,
   disconnectClients,
   shutdownRemoteServer,
   showWindow,
@@ -38,7 +39,6 @@ export const tools = [
   loadDiskImage,
   loadSmartportImage,
   loadFile,
-  saveBasicFile,
-  saveAsmFile,
-  saveDiskFile,
+  getScreenshot,
+  saveTo,
 ];

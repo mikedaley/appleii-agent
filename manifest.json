@@ -1,0 +1,119 @@
+{
+  "manifest_version": "0.3",
+  "name": "appleii-agent",
+  "display_name": "Apple //e Agent",
+  "version": "1.0.8",
+  "description": "MCP server for the Apple //e browser emulator — control the emulator and integrate with AI agents",
+  "long_description": "This MCP server bridges AI agents like Claude with the Apple //e browser emulator. Through natural language, agents can manage windows, load disk images, write BASIC programs, assemble code, control the emulator, and inspect state.",
+  "author": {
+    "name": "Shawn Bullock",
+    "email": "shawn@agenticexpert.ai"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mikedaley/appleii-agent.git"
+  },
+  "homepage": "https://github.com/mikedaley/appleii-agent#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ag-ui",
+    "apple-ii",
+    "apple-iie",
+    "emulator",
+    "retro",
+    "6502",
+    "claude",
+    "ai-agent"
+  ],
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "src/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/src/index.js"],
+      "env": {
+        "PORT": "3033",
+        "HTTPS": "false"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "server_control",
+      "description": "Start, stop, restart, or check server status"
+    },
+    {
+      "name": "set_https",
+      "description": "Toggle HTTPS mode"
+    },
+    {
+      "name": "set_debug",
+      "description": "Toggle debug logging"
+    },
+    {
+      "name": "get_state",
+      "description": "Get current server state"
+    },
+    {
+      "name": "get_version",
+      "description": "Get MCP server version information"
+    },
+    {
+      "name": "shutdown_remote_server",
+      "description": "Shutdown another MCP server instance on the same port"
+    },
+    {
+      "name": "disconnect_clients",
+      "description": "Gracefully disconnect all connected emulator clients"
+    },
+    {
+      "name": "emma_command",
+      "description": "Generic command wrapper — routes to all frontend tools"
+    },
+    {
+      "name": "showWindow",
+      "description": "Show and bring a window to front"
+    },
+    {
+      "name": "hideWindow",
+      "description": "Hide a window"
+    },
+    {
+      "name": "focusWindow",
+      "description": "Bring a window to front"
+    },
+    {
+      "name": "load_disk_image",
+      "description": "Load a floppy disk image (.dsk, .do, .po, .nib, .woz)"
+    },
+    {
+      "name": "load_smartport_image",
+      "description": "Load a SmartPort hard drive image (.hdv, .po, .2mg)"
+    },
+    {
+      "name": "load_file",
+      "description": "Load any file (binary or text)"
+    },
+    {
+      "name": "save_basic_file",
+      "description": "Save a BASIC program to a .bas file"
+    },
+    {
+      "name": "save_asm_file",
+      "description": "Save assembly source to a .s or .asm file"
+    },
+    {
+      "name": "save_disk_file",
+      "description": "Save binary disk data to a file"
+    }
+  ],
+  "compatibility": {
+    "claude_desktop": ">=1.0.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

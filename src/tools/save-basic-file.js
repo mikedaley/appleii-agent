@@ -7,17 +7,17 @@
 
 import fs from 'fs';
 import path from 'path';
-import { homedir } from 'os';
+import { pathResolver } from '../path-resolver.js';
 
 export const tool = {
   name: "save_basic_file",
-  description: "Save BASIC program text to a file on the local filesystem",
+  description: "Save BASIC program text to a file on the local filesystem. Supports sandbox paths like [basic]/program.bas or full paths like ~/Documents/program.bas",
   inputSchema: {
     type: "object",
     properties: {
       path: {
         type: "string",
-        description: "Path to save file (supports ~ for home directory, .bas extension recommended)",
+        description: "Path to save file. Use [sandbox]/path syntax or full path with ~ for home directory (.bas extension recommended)",
       },
       content: {
         type: "string",
@@ -51,19 +51,8 @@ export function handler(args) {
   }
 
   try {
-    // Expand ~ to home directory
-    let expandedPath = filePath;
-    if (filePath.startsWith('~/')) {
-      expandedPath = path.join(homedir(), filePath.slice(2));
-    } else if (filePath === '~') {
-      return {
-        success: false,
-        error: "Cannot save to home directory root, please specify a filename",
-      };
-    }
-
-    // Resolve to absolute path
-    const absolutePath = path.resolve(expandedPath);
+    // Resolve path (handles sandbox paths and ~ expansion)
+    const absolutePath = pathResolver.resolve(filePath);
 
     // Ensure parent directory exists
     const dir = path.dirname(absolutePath);

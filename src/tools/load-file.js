@@ -1,16 +1,16 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { pathResolver } from '../path-resolver.js';
 
 export const tool = {
   name: "load_file",
-  description: "Read a file from the local filesystem. Returns base64 for binary files or plain text for text files.",
+  description: "Read a file from the local filesystem. Returns base64 for binary files or plain text for text files. Supports sandbox paths like [files]/program.bas or full paths like ~/Documents/file.txt",
   inputSchema: {
     type: "object",
     properties: {
       path: {
         type: "string",
-        description: "Path to the file (supports ~ for home directory)"
+        description: "Path to the file. Use [sandbox]/path syntax or full path with ~ for home directory"
       },
       binary: {
         type: "boolean",
@@ -33,11 +33,8 @@ export function handler(args) {
   }
 
   try {
-    // Expand ~ to home directory
-    let expandedPath = filePath;
-    if (filePath.startsWith('~')) {
-      expandedPath = path.join(os.homedir(), filePath.slice(1));
-    }
+    // Resolve path (handles sandbox paths and ~ expansion)
+    const expandedPath = pathResolver.resolve(filePath);
 
     // Check if file exists
     if (!fs.existsSync(expandedPath)) {
