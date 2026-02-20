@@ -7,7 +7,7 @@
 
 export const tool = {
   name: "disconnect_clients",
-  description: "Gracefully disconnect all connected Apple //e emulator clients",
+  description: "Gracefully disconnect all connected Apple //e emulators",
   inputSchema: {
     type: "object",
     properties: {},
@@ -21,7 +21,7 @@ export function handler(args, httpServer) {
     success: true,
     disconnected: result.disconnected,
     message: result.disconnected > 0
-      ? `Disconnected ${result.disconnected} client(s)`
-      : "No clients were connected",
+      ? `Disconnected ${result.disconnected} emulator(s)`
+      : "No emulators were connected",
   };
 }

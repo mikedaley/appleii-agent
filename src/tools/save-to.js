@@ -11,6 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { pathResolver } from '../path-resolver.js';
+import { checkResolution, sendAppToolCall } from './routing-helpers.js';
 
 export const tool = {
   name: "save_to",
@@ -79,6 +80,10 @@ export const tool = {
         enum: ["auto", "text", "graphics"],
         description: "For from=screen: 'graphics' captures as PNG, 'text' captures screen text, 'auto' defaults to graphics (default: auto)",
         default: "auto"
+      },
+      emulator: {
+        type: "string",
+        description: "Target emulator name, or omit to use default routing. Not used for from=raw."
       }
     },
     required: ["from", "whereTo"]
@@ -88,28 +93,8 @@ export const tool = {
 /**
  * Call a frontend app tool via AG-UI and return parsed result
  */
-async function callAppTool(httpServer, command, params = {}) {
-  const toolCallId = `tc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  await httpServer.sendEvent({
-    type: "TOOL_CALL_START",
-    tool_call_id: toolCallId,
-    tool_call_name: "emma_command",
-  });
-
-  await httpServer.sendEvent({
-    type: "TOOL_CALL_ARGS",
-    tool_call_id: toolCallId,
-    delta: JSON.stringify({ command, params }),
-  });
-
-  await httpServer.sendEvent({
-    type: "TOOL_CALL_END",
-    tool_call_id: toolCallId,
-  });
-
-  const raw = await httpServer.waitForToolResult(toolCallId, 15000);
-  return typeof raw === "string" ? JSON.parse(raw) : raw;
+async function callAppTool(httpServer, command, params = {}, emulatorName = null) {
+  return await sendAppToolCall(httpServer, emulatorName, command, params, 15000);
 }
 
 /**
@@ -119,7 +104,7 @@ async function callAppTool(httpServer, command, params = {}) {
  *   isBinary  — true if content is base64-encoded binary
  *   isDataUrl — true if the base64 has a data URL prefix that must be stripped
  */
-async function fetchContent(httpServer, args) {
+async function fetchContent(httpServer, args, emulatorName = null) {
   const { from, content, filename, drive = 0, address, length, screenMode = "auto" } = args;
 
   switch (from) {
@@ -134,26 +119,26 @@ async function fetchContent(httpServer, args) {
     }
 
     case "basic-editor": {
-      const result = await callAppTool(httpServer, "basicProgramGet");
+      const result = await callAppTool(httpServer, "basicProgramGet", {}, emulatorName);
       if (!result?.success) throw new Error(result?.error || "Failed to get BASIC program from editor");
       return { content: result.program, isBinary: false };
     }
 
     case "asm-editor": {
-      const result = await callAppTool(httpServer, "asmGet");
+      const result = await callAppTool(httpServer, "asmGet", {}, emulatorName);
       if (!result?.success) throw new Error(result?.error || "Failed to get ASM source from editor");
       return { content: result.source, isBinary: false };
     }
 
     case "basic-memory": {
-      const result = await callAppTool(httpServer, "directReadBasic");
+      const result = await callAppTool(httpServer, "directReadBasic", {}, emulatorName);
       if (!result?.success) throw new Error(result?.error || "Failed to read BASIC from memory");
       return { content: result.program, isBinary: false };
     }
 
     case "file-explorer": {
       if (!filename) throw new Error("filename is required for from=file-explorer");
-      const result = await callAppTool(httpServer, "getDiskFileContent", { filename, drive });
+      const result = await callAppTool(httpServer, "getDiskFileContent", { filename, drive }, emulatorName);
       if (!result?.success) throw new Error(result?.error || "Failed to read file from disk");
       if (result.isBinary) {
         return { content: result.contentBase64, isBinary: true };
@@ -164,19 +149,19 @@ async function fetchContent(httpServer, args) {
     case "memory-range": {
       if (!address) throw new Error("address is required for from=memory-range");
       if (!length) throw new Error("length is required for from=memory-range");
-      const result = await callAppTool(httpServer, "directSaveBinaryRangeTo", { address, length });
+      const result = await callAppTool(httpServer, "directSaveBinaryRangeTo", { address, length }, emulatorName);
       if (!result?.success) throw new Error(result?.error || "Failed to read memory range");
       return { content: result.contentBase64, isBinary: true };
     }
 
     case "screen": {
       if (screenMode === "text") {
-        const result = await callAppTool(httpServer, "captureScreenText");
+        const result = await callAppTool(httpServer, "captureScreenText", {}, emulatorName);
         if (!result?.success) throw new Error(result?.error || "Failed to capture screen text");
         return { content: result.text, isBinary: false };
       }
       // "auto" and "graphics" → PNG
-      const result = await callAppTool(httpServer, "captureScreenshot");
+      const result = await callAppTool(httpServer, "captureScreenshot", {}, emulatorName);
       if (!result?.success) throw new Error(result?.error || "Failed to capture screenshot");
       return { content: result.imageBase64, isBinary: true, isDataUrl: true };
     }
@@ -187,16 +172,25 @@ async function fetchContent(httpServer, args) {
 }
 
 export async function handler(args, httpServer) {
-  const { whereTo, direct = true, overwrite = false } = args;
+  const { from, whereTo, direct = true, overwrite = false, emulator: emulatorParam } = args;
 
   if (!whereTo) {
     return { success: false, error: "whereTo parameter is required" };
   }
 
+  // Resolve emulator for AG-UI sources (not needed for raw content)
+  let emulatorName = null;
+  if (from !== "raw") {
+    const resolution = httpServer.resolveEmulator(emulatorParam);
+    const prompt = checkResolution(resolution);
+    if (prompt) return prompt;
+    emulatorName = resolution.target.name;
+  }
+
   // Fetch content from the source
   let fetched;
   try {
-    fetched = await fetchContent(httpServer, args);
+    fetched = await fetchContent(httpServer, args, emulatorName);
   } catch (err) {
     return { success: false, error: err.message };
   }

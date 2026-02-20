@@ -5,44 +5,36 @@
  *  Shawn Bullock <shawn@agenticexpert.ai>
  */
 
+import { checkResolution, sendAppToolCall } from "./routing-helpers.js";
+
 export const tool = {
   name: "get_screenshot",
   description: "Capture the current Apple //e screen and return it as a viewable image.",
   inputSchema: {
     type: "object",
-    properties: {},
-    required: []
+    properties: {
+      emulator: {
+        type: "string",
+        description: "Target emulator name, or omit to use default routing",
+      },
+    },
   }
 };
 
 export async function handler(args, httpServer) {
-  const toolCallId = `tc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const { emulator: emulatorParam } = args;
 
-  await httpServer.sendEvent({
-    type: "TOOL_CALL_START",
-    tool_call_id: toolCallId,
-    tool_call_name: "emma_command",
-  });
+  const resolution = httpServer.resolveEmulator(emulatorParam);
+  const prompt = checkResolution(resolution);
+  if (prompt) return prompt;
 
-  await httpServer.sendEvent({
-    type: "TOOL_CALL_ARGS",
-    tool_call_id: toolCallId,
-    delta: JSON.stringify({ command: "captureScreenshot", params: {} }),
-  });
+  const result = await sendAppToolCall(httpServer, resolution.target.name, "captureScreenshot", {});
 
-  await httpServer.sendEvent({
-    type: "TOOL_CALL_END",
-    tool_call_id: toolCallId,
-  });
-
-  const raw = await httpServer.waitForToolResult(toolCallId, 10000);
-  const captureResult = typeof raw === "string" ? JSON.parse(raw) : raw;
-
-  if (!captureResult?.success) {
-    return { success: false, error: captureResult?.error || "Screenshot capture failed" };
+  if (!result?.success) {
+    return { success: false, error: result?.error || "Screenshot capture failed" };
   }
 
-  const { imageBase64 } = captureResult;
+  const { imageBase64 } = result;
   if (!imageBase64) {
     return { success: false, error: "No image data returned from emulator" };
   }
