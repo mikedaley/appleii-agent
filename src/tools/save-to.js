@@ -21,8 +21,8 @@ export const tool = {
     properties: {
       from: {
         type: "string",
-        enum: ["basic-editor", "asm-editor", "basic-memory", "file-explorer", "memory-range", "screen", "raw"],
-        description: "Content source: basic-editor (BASIC editor text), asm-editor (ASM editor source), basic-memory (BASIC program from emulator memory), file-explorer (file from disk/SmartPort), memory-range (raw memory bytes), screen (screen capture), raw (LLM-provided content)"
+        enum: ["basic-editor", "asm-editor", "basic-memory", "file-explorer", "disk", "memory-range", "screen", "printer", "raw"],
+        description: "Content source: basic-editor (BASIC editor text), asm-editor (ASM editor source), basic-memory (BASIC program from emulator memory), file-explorer (file from disk/SmartPort), disk (entire disk image for a drive, modifications included), memory-range (raw memory bytes), screen (screen capture), printer (printed paper as PNG), raw (LLM-provided content)"
       },
       whereTo: {
         type: "string",
@@ -62,8 +62,8 @@ export const tool = {
       },
       drive: {
         type: "number",
-        description: "For from=file-explorer: drive number 0 or 1 (default 0)",
-        default: 0
+        description: "For from=file-explorer or from=disk: Apple II drive number 1 or 2 (default 1). Drive 1 = first physical drive, Drive 2 = second physical drive.",
+        default: 1
       },
       // memory-range source
       address: {
@@ -105,7 +105,7 @@ async function callAppTool(httpServer, command, params = {}, emulatorName = null
  *   isDataUrl — true if the base64 has a data URL prefix that must be stripped
  */
 async function fetchContent(httpServer, args, emulatorName = null) {
-  const { from, content, filename, drive = 0, address, length, screenMode = "auto" } = args;
+  const { from, content, filename, drive = 1, address, length, screenMode = "auto" } = args;
 
   switch (from) {
 
@@ -146,6 +146,12 @@ async function fetchContent(httpServer, args, emulatorName = null) {
       return { content: result.content ?? result.text ?? result.contentBase64, isBinary: false };
     }
 
+    case "disk": {
+      const result = await callAppTool(httpServer, "getDiskImageData", { driveNum: drive }, emulatorName);
+      if (!result?.success) throw new Error(result?.error || "Failed to read disk image");
+      return { content: result.contentBase64, isBinary: true };
+    }
+
     case "memory-range": {
       if (!address) throw new Error("address is required for from=memory-range");
       if (!length) throw new Error("length is required for from=memory-range");
@@ -164,6 +170,14 @@ async function fetchContent(httpServer, args, emulatorName = null) {
       const result = await callAppTool(httpServer, "captureScreenshot", {}, emulatorName);
       if (!result?.success) throw new Error(result?.error || "Failed to capture screenshot");
       return { content: result.imageBase64, isBinary: true, isDataUrl: true };
+    }
+
+    case "printer": {
+      // Printed paper → PNG. printerCapturePaper returns bare base64 (no data
+      // URL prefix), so isDataUrl stays false.
+      const result = await callAppTool(httpServer, "printerCapturePaper", {}, emulatorName);
+      if (!result?.success) throw new Error(result?.error || "Failed to capture printer paper");
+      return { content: result.imageBase64, isBinary: true };
     }
 
     default:
