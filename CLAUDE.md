@@ -174,7 +174,7 @@ bash Deploy.sh   # npm install + pack .mcpb + npm publish --access public
 - `build.sh` — build only: `npm install`, packages as Desktop Extension (`.mcpb`).
 - `Deploy.sh` — full release: build, pack, then `npm publish`.
 
-Both invoke `npx @anthropic-ai/mcpb pack` so `mcpb` resolves regardless of PATH/nvm (works under `sh` and `bash`).
+Both invoke `npm exec --yes -- @anthropic-ai/mcpb pack` so `mcpb` resolves via the active node's npm regardless of PATH/nvm (works under `sh` and `bash`, any node version). `npx` is avoided — a stale `~/.local/bin/npx` standalone can shadow node's and break the `pack` subcommand.
 
 **Before deploying:** bump `version` in both `package.json` and `manifest.json` (kept in sync), and keep the manifest `tools` array matching the registry in `src/tools/index.js`. The npm package `@retrotech71/appleii-agent` and the emulator app (web-a2e) version independently; the app enforces a minimum agent version (floor), so the agent version must be ≥ that floor.
 
