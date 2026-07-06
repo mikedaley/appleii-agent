@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
 npm install
-mcpb pack
+npx --yes @anthropic-ai/mcpb pack
+npm publish --access public
 

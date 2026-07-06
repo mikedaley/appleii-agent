@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "appleii-agent",
   "display_name": "Apple //e Agent",
-  "version": "1.1.4",
+  "version": "1.3.0",
   "description": "MCP server for the Apple //e browser emulator — control the emulator and integrate with AI agents",
   "long_description": "This MCP server bridges AI agents like Claude with the Apple //e browser emulator. Through natural language, agents can manage windows, load disk images, write BASIC programs, assemble code, control the emulator, and inspect state.",
   "author": {
@@ -54,7 +54,7 @@
     },
     {
       "name": "get_state",
-      "description": "Get current server state"
+      "description": "Get current server + emulator state"
     },
     {
       "name": "get_version",
@@ -69,20 +69,20 @@
       "description": "Gracefully disconnect all connected emulator clients"
     },
     {
+      "name": "reload_sandbox",
+      "description": "Reload sandbox.config without restarting"
+    },
+    {
+      "name": "list_connections",
+      "description": "List all connected emulators with name, state, and default status"
+    },
+    {
+      "name": "set_default_emulator",
+      "description": "Set which emulator receives calls when no emulator param is given"
+    },
+    {
       "name": "emma_command",
-      "description": "Generic command wrapper — routes to all frontend tools"
-    },
-    {
-      "name": "showWindow",
-      "description": "Show and bring a window to front"
-    },
-    {
-      "name": "hideWindow",
-      "description": "Hide a window"
-    },
-    {
-      "name": "focusWindow",
-      "description": "Bring a window to front"
+      "description": "Generic command wrapper — delegates to any frontend app tool (window management, editors, memory, etc.)"
     },
     {
       "name": "load_disk_image",
@@ -94,19 +94,15 @@
     },
     {
       "name": "load_file",
-      "description": "Load any file (binary or text)"
+      "description": "Load any file (base64 for binary, plain text for text)"
     },
     {
-      "name": "save_basic_file",
-      "description": "Save a BASIC program to a .bas file"
+      "name": "get_screenshot",
+      "description": "Capture the screen or printed paper and return it as a viewable image"
     },
     {
-      "name": "save_asm_file",
-      "description": "Save assembly source to a .s or .asm file"
-    },
-    {
-      "name": "save_disk_file",
-      "description": "Save binary disk data to a file"
+      "name": "save_to",
+      "description": "Load content from an emulator source and save it to a sandbox path"
     }
   ],
   "compatibility": {
