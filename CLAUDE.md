@@ -32,7 +32,8 @@ appleii-agent/
 │       ├── load-file.js
 │       ├── get-screenshot.js  # Capture screen → MCP image content
 │       └── save-to.js         # Load from emulator source → save to file
-├── build.sh                  # Build and publish script
+├── build.sh                  # Build + pack .mcpb (no publish)
+├── Deploy.sh                 # Build + pack + npm publish
 └── manifest.json             # Desktop Extension manifest
 ```
 
@@ -166,10 +167,16 @@ Security: path traversal (`../`) blocked. `save_to` defaults to `overwrite: fals
 ### Building and Publishing
 
 ```bash
-./build.sh
+bash build.sh    # npm install + pack .mcpb (no publish)
+bash Deploy.sh   # npm install + pack .mcpb + npm publish --access public
 ```
 
-Runs `npm install`, packages as Desktop Extension (`.mcpb`), publishes to npm.
+- `build.sh` — build only: `npm install`, packages as Desktop Extension (`.mcpb`).
+- `Deploy.sh` — full release: build, pack, then `npm publish`.
+
+Both invoke `npx @anthropic-ai/mcpb pack` so `mcpb` resolves regardless of PATH/nvm (works under `sh` and `bash`).
+
+**Before deploying:** bump `version` in both `package.json` and `manifest.json` (kept in sync), and keep the manifest `tools` array matching the registry in `src/tools/index.js`. The npm package `@retrotech71/appleii-agent` and the emulator app (web-a2e) version independently; the app enforces a minimum agent version (floor), so the agent version must be ≥ that floor.
 
 ### Debugging
 
