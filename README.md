@@ -1,4 +1,4 @@
-# @appleii/mcp-agent
+# @retrotech71/appleii-agent
 
 MCP server for the [Apple //e browser emulator](https://github.com/mikedaley/web-a2e) — control the emulator with AI agents via the AG-UI protocol.
 
@@ -12,6 +12,9 @@ This MCP (Model Context Protocol) server bridges AI agents like Claude with the 
 - **Assemble code** — write 65C02 assembly, assemble, and load into memory
 - **Control the emulator** — power on/off, reset, type text, manage expansion slots
 - **Inspect state** — read memory, CPU registers, and emulator status
+- **Capture the screen** — grab the display (or the printed paper) as a viewable image
+- **Save from the emulator** — pull BASIC/ASM source, memory, disk images, or files back to disk
+- **Drive multiple emulators** — connect several browser tabs at once and route calls per-emulator
 
 ## Prerequisites
 
@@ -23,7 +26,7 @@ This MCP (Model Context Protocol) server bridges AI agents like Claude with the 
 ### From npm
 
 ```bash
-npm install -g @appleii/mcp-agent
+npm install -g @retrotech71/appleii-agent
 ```
 
 ### From source
@@ -157,20 +160,32 @@ Save assembly code to ~/code/program.s
 ### Emulator Control
 | Tool | Description |
 |------|-------------|
-| `emma_command` | Generic command wrapper — routes to all frontend tools |
-| `showWindow` | Show and bring a window to front |
-| `hideWindow` | Hide a window |
-| `focusWindow` | Bring a window to front |
+| `emma_command` | Generic command wrapper — delegates to any frontend app tool (e.g. `showWindow`, `hideWindow`, `focusWindow`, BASIC/ASM editing, memory access). Accepts an optional `emulator` param |
 
-### File Operations
+> Window management (`showWindow`, `hideWindow`, `focusWindow`) and most in-emulator actions are frontend tools — call them by name through `emma_command`.
+
+### File Operations — Load
 | Tool | Description |
 |------|-------------|
 | `load_disk_image` | Load a floppy disk image (.dsk, .do, .po, .nib, .woz) |
 | `load_smartport_image` | Load a SmartPort hard drive image (.hdv, .po, .2mg) |
-| `load_file` | Load any file (binary or text) |
-| `save_basic_file` | Save a BASIC program to a .bas file |
-| `save_asm_file` | Save assembly source to a .s or .asm file |
-| `save_disk_file` | Save binary disk data to a file |
+| `load_file` | Load any file (base64 for binary, plain text for text) |
+
+### File Operations — Capture / Save From Emulator
+| Tool | Description |
+|------|-------------|
+| `get_screenshot` | Capture the screen (or the printed paper via `source: "printer"`) → viewable image |
+| `save_to` | Load content from an emulator source and save it to a sandbox path in one step |
+
+`save_to` sources (`from`): `basic-editor`, `asm-editor`, `basic-memory`, `file-explorer`, `disk` (full disk image for a drive), `memory-range`, `screen`, `printer`, `raw`. For `file-explorer`/`disk`, `drive` selects Apple II drive `1` or `2` (default `1`). Defaults to `direct: true` (saves silently, returns metadata only — base64 never sent to the LLM) and `overwrite: false`.
+
+### Multi-Emulator
+| Tool | Description |
+|------|-------------|
+| `list_connections` | List all connected emulators with name, state, and default status |
+| `set_default_emulator` | Set which emulator receives calls when no `emulator` param is given |
+
+Tools that talk to the emulator (`emma_command`, `get_screenshot`, `save_to`) accept an optional `emulator` param: a name, `"all"` to broadcast, or omit to use default routing.
 
 ### Server Management
 | Tool | Description |
@@ -178,8 +193,9 @@ Save assembly code to ~/code/program.s
 | `server_control` | Start, stop, restart, or check server status |
 | `set_https` | Toggle HTTPS mode |
 | `set_debug` | Toggle debug logging |
-| `get_state` | Get current server state |
+| `get_state` | Get current server + emulator state |
 | `get_version` | Get MCP server version information |
+| `reload_sandbox` | Reload sandbox.config without restarting |
 | `shutdown_remote_server` | Shutdown another MCP server instance on the same port |
 | `disconnect_clients` | Gracefully disconnect all connected emulator clients |
 
@@ -228,9 +244,9 @@ Sandbox paths work with:
 - `load_disk_image` - `[disks]/game.dsk`
 - `load_smartport_image` - `[games]/hd.hdv`
 - `load_file` - `[files]/data.bin`
-- `save_basic_file` - `[basic]/program.bas`
-- `save_asm_file` - `[asm]/code.s`
-- `save_disk_file` - `[files]/output.bin`
+- `save_to` - `[basic]/program.bas`, `[asm]/code.s`, `[files]/output.bin`
+
+Path traversal (`../`) is blocked, and `save_to` defaults to `overwrite: false`.
 
 ## Environment Variables
 
